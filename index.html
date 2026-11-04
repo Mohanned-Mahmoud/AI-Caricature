@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Caricature Photobooth</title>
+  <meta name="description" content="Step in front of the camera and watch your portrait get drawn and coloured in as a hand-inked caricature." />
+  <meta name="theme-color" content="#1c0f24" />
+  <link rel="icon" href="/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body data-state="welcome">
+  <!-- Fixed 1080x1920 Kiosk Stage -->
+  <main id="kiosk-stage">
+    <!-- FLASH EFFECT -->
+    <div id="flash"></div>
+
+    <!-- SCREEN 1: WELCOME SCREEN (Video Loop) -->
+    <section id="screen-welcome" class="screen" aria-label="Welcome Screen">
+      <video id="welcome-video" src="/welcome.mp4" autoplay loop muted playsinline preload="auto"></video>
+      <div class="welcome-prompt-wrap" aria-hidden="true">
+        <div class="welcome-prompt-pill">
+          <span class="welcome-prompt-dot"></span>
+          <span class="welcome-prompt-text">Tap to Start</span>
+        </div>
+      </div>
+      <button id="btn-start" class="welcome-touch-overlay" aria-label="Tap Anywhere to Start"></button>
+    </section>
+
+    <!-- SCREEN 2: CAMERA SCREEN -->
+    <section id="screen-camera" class="screen">
+      <!-- Layer 1: SVG Artwork DOM -->
+      <div id="art-camera" class="layer-artwork"></div>
+
+      <!-- Layer 2: Live Camera Viewport -->
+      <div class="layer-content">
+        <div id="camera-viewport">
+          <video id="video" playsinline muted></video>
+        </div>
+      </div>
+
+      <!-- Layer 3: Interactive Controls -->
+      <div class="layer-controls">
+        <button id="shutter" class="kiosk-btn shutter-btn" aria-label="Take Photo">
+          <span class="shutter-pulse-ring"></span>
+        </button>
+        <button id="btn-effects" class="kiosk-btn btn-effects-toggle" aria-label="Camera Effects"></button>
+        <button id="btn-flip" class="kiosk-btn btn-flip-camera" aria-label="Switch Camera"></button>
+        <div class="cam-select-wrap">
+          <select id="camera-select" aria-label="Choose camera"></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: COUNTDOWN SCREEN -->
+    <section id="screen-countdown" class="screen">
+      <!-- Blurred Camera Stream Background -->
+      <div class="countdown-camera-bg">
+        <video id="video-countdown" playsinline muted></video>
+      </div>
+
+      <!-- Layer 1: SVG Artwork DOM (Vintage frame + purple brush) -->
+      <div id="art-countdown" class="layer-artwork"></div>
+
+      <!-- Layer 2: Dynamic Countdown Number -->
+      <div class="layer-content">
+        <div id="countdown" class="countdown-digit" aria-live="assertive"></div>
+      </div>
+    </section>
+
+    <!-- SCREEN 4: AI PROCESSING SCREEN -->
+    <section id="screen-loading" class="screen" aria-live="polite">
+      <!-- Layer 1: SVG Artwork DOM (Official White Ejada Branding) -->
+      <div id="art-loading" class="layer-artwork"></div>
+
+      <!-- Layer 2: Dynamic Content (Centered Branded Loading Presentation) -->
+      <div class="layer-content">
+        <div class="loading-card-wrap">
+          <!-- Animated Brand Spinner & Hourglass -->
+          <div class="loading-brand-visual">
+            <svg class="loading-brand-svg" viewBox="0 0 120 120" width="140" height="140">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="5"/>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#00a8e8" stroke-width="5" stroke-dasharray="80 230" stroke-linecap="round" class="loading-brand-spin"/>
+              <!-- Hourglass frame -->
+              <path d="M42 32 h36 M42 88 h36 M47 32 L60 57 L73 32 Z" fill="#092d5d"/>
+              <path d="M47 88 L60 63 L73 88 Z" fill="#00a8e8"/>
+              <!-- Golden flowing sand -->
+              <path d="M53 82 L60 67 L67 82 Z" fill="#f59e0b"/>
+              <circle cx="60" cy="62" r="3" fill="#f59e0b" class="sand-drip"/>
+            </svg>
+          </div>
+
+          <h2 class="loading-headline">Creating your caricature...</h2>
+
+          <div class="loading-status-box">
+            <p id="ld-sub">Studying your smile&hellip;</p>
+          </div>
+
+          <div class="proc-progress-track">
+            <div id="progress-bar-fill" class="proc-progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 5: LIVE DRAWING SCREEN (EASEL) -->
+    <section id="screen-drawing" class="screen">
+      <!-- Layer 1: SVG Artwork DOM (Wooden easel & layout) -->
+      <div id="art-drawing" class="layer-artwork"></div>
+
+      <!-- Layer 2: Dynamic Content (Stage canvas on easel paper + synchronized indicators) -->
+      <div class="layer-content">
+        <div id="ind-outline" class="drawing-indicator ind-outline" aria-label="Outline stage"></div>
+        <div id="ind-color" class="drawing-indicator ind-color" aria-label="Color stage"></div>
+        <div id="ind-finish" class="drawing-indicator ind-finish" aria-label="Finish stage"></div>
+
+        <div id="easel-stage-container">
+          <canvas id="stage" aria-label="Your caricature being drawn"></canvas>
+        </div>
+
+        <p id="caption" class="drawing-caption"></p>
+      </div>
+    </section>
+
+    <!-- SCREEN 6: FINAL RESULT SCREEN -->
+    <section id="screen-final" class="screen">
+      <!-- Layer 1: SVG Artwork DOM (Framed presentation) -->
+      <div id="art-final" class="layer-artwork"></div>
+
+      <!-- Layer 2: Dynamic Content (Final caricature in frame) -->
+      <div class="layer-content">
+        <div id="caricature-frame-viewport">
+          <img id="final-result-img" alt="Your completed hand-inked caricature" />
+        </div>
+        <div id="idle-bar"></div>
+      </div>
+
+      <!-- Layer 3: Interactive Controls (Print, Save, New Photo) -->
+      <div class="layer-controls">
+        <button id="btn-print" class="kiosk-btn btn-print-action" aria-label="Print Caricature"></button>
+        <a id="btn-save" class="kiosk-btn btn-save-action" download="caricature.png" aria-label="Save Image"></a>
+        <button id="btn-retake" class="kiosk-btn btn-retake-action" aria-label="Take New Photo"></button>
+      </div>
+    </section>
+
+    <!-- ERROR SCREEN -->
+    <section id="screen-error" class="screen">
+      <div class="error-modal-dialog">
+        <h1 id="error-title">Something went off the page</h1>
+        <p id="error-text"></p>
+        <div class="error-btn-group">
+          <button id="btn-retry" class="error-btn primary">Try again</button>
+          <button id="btn-restart" class="error-btn">Start over</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- PRINT-ONLY AREA (Clean high-resolution photo output on official template) -->
+  <div id="print-area" aria-hidden="true"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

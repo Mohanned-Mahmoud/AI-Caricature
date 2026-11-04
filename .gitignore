@@ -1,0 +1,20 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+.vercel
+
+# Scratch / temp files
+scratch/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Vite temp files
+vite.config.js.timestamp-*
