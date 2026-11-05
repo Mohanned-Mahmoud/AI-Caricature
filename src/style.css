@@ -812,6 +812,253 @@ body[data-state='loading'] #kiosk-stage,
   }
 
   /* -------------------------------------------------------------
+   QR CODE DOWNLOAD MODAL (Kiosk Overlay)
+------------------------------------------------------------- */
+#qr-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease;
+}
+
+#qr-modal.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.kiosk-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 45, 93, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.qr-card {
+  position: relative;
+  z-index: 10;
+  width: 760px;
+  background: #ffffff;
+  border-radius: 40px;
+  padding: 56px 48px 48px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 35px 90px rgba(9, 45, 93, 0.45), 0 0 0 1px rgba(0, 168, 232, 0.2);
+  transform: scale(0.92) translateY(20px);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#qr-modal.open .qr-card {
+  transform: scale(1) translateY(0);
+}
+
+.qr-close-btn {
+  position: absolute;
+  top: 28px;
+  right: 28px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.qr-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: scale(1.08);
+}
+
+.qr-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.qr-icon-badge {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.qr-title {
+  font-family: var(--sans);
+  font-size: 44px;
+  font-weight: 700;
+  color: #092d5d;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+}
+
+.qr-subtitle {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 400;
+  color: #64748b;
+  margin: 0;
+  max-width: 580px;
+  line-height: 1.45;
+}
+
+.qr-body {
+  width: 100%;
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36px;
+}
+
+.qr-state-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-spinner {
+  width: 80px;
+  height: 80px;
+  border: 6px solid #e2e8f0;
+  border-top-color: #00a8e8;
+  border-radius: 50%;
+  animation: qrSpin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes qrSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.qr-loading-text {
+  font-family: var(--sans);
+  font-size: 26px;
+  font-weight: 500;
+  color: #092d5d;
+}
+
+.qr-code-frame {
+  width: 380px;
+  height: 380px;
+  background: #ffffff;
+  border-radius: 28px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 12px 35px rgba(9, 45, 93, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  margin-bottom: 24px;
+}
+
+#qr-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  border-radius: 12px;
+}
+
+.qr-instruction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 999px;
+}
+
+.qr-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+  animation: qrPulse 2s ease-in-out infinite;
+}
+
+@keyframes qrPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.qr-error-text {
+  font-family: var(--sans);
+  font-size: 24px;
+  color: #ef4444;
+  margin-bottom: 20px;
+}
+
+.qr-retry-btn {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 600;
+  padding: 14px 36px;
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+.qr-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.qr-done-btn {
+  width: 380px;
+  height: 78px;
+  background: linear-gradient(135deg, #092d5d 0%, #00a8e8 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 39px;
+  font-family: var(--sans);
+  font-size: 30px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(0, 168, 232, 0.35);
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qr-done-btn:hover {
+  transform: scale(1.03);
+  filter: brightness(1.06);
+  box-shadow: 0 16px 36px rgba(0, 168, 232, 0.45);
+}
+
+/* -------------------------------------------------------------
    PRINT MEDIA STYLESHEET
    Prints exactly 1 page: high-resolution flattened photo card
 ------------------------------------------------------------- */

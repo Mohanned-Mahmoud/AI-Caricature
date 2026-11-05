@@ -1,4 +1,5 @@
 import './style.css';
+import QRCode from 'qrcode';
 import { CONFIG } from './config.js';
 import { Animator, drawCover, drawFit, drawFitHeight } from './sketch.js';
 
@@ -38,6 +39,10 @@ injectSvgDom();
 const FRAME_APERTURE_W = 2205;
 const FRAME_APERTURE_H = 2480;
 const FRAME_RATIO = FRAME_APERTURE_W / FRAME_APERTURE_H; // ~0.8891129
+
+let currentPrintDataUrl = null;
+let uploadedQrUrl = null;
+let isUploadingQr = false;
 
 /**
  * Prepares the high-resolution photo print by rendering the official
@@ -88,6 +93,7 @@ async function preparePrintImage() {
     URL.revokeObjectURL(url);
 
     const printDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    currentPrintDataUrl = printDataUrl;
     printArea.innerHTML = `<img id="print-composite-img" src="${printDataUrl}" alt="Photobooth Print" />`;
   } catch (err) {
     console.error('Failed to prepare print image:', err);
@@ -246,6 +252,9 @@ function goToWelcome() {
   setCaption('');
   countdownEl.innerHTML = '';
   setDrawingStage('');
+  closeQrModal();
+  uploadedQrUrl = null;
+  currentPrintDataUrl = null;
   setState('welcome');
 }
 
@@ -516,7 +525,6 @@ async function runSession(id) {
     setCaption('');
     if (finalResultImg) finalResultImg.src = resultSrc;
     if ($('btn-save')) {
-      $('btn-save').href = resultSrc;
       $('btn-save').style.display = CONFIG.enableDownload ? '' : 'none';
     }
     preparePrintImage();
@@ -556,6 +564,9 @@ async function restart() {
   setCaption('');
   countdownEl.innerHTML = '';
   setDrawingStage('');
+  closeQrModal();
+  uploadedQrUrl = null;
+  currentPrintDataUrl = null;
 
   if (!NOCAM && !stream) {
     try {
@@ -607,6 +618,112 @@ $('btn-print')?.addEventListener('click', async () => {
   window.print();
 });
 
+// Final Screen: Save / Download via QR Modal
+$('btn-save')?.addEventListener('click', () => {
+  showQrModal();
+});
+
+// QR Code Modal action listeners
+$('btn-qr-close')?.addEventListener('click', closeQrModal);
+$('btn-qr-done')?.addEventListener('click', closeQrModal);
+$('qr-modal-backdrop')?.addEventListener('click', closeQrModal);
+$('btn-qr-retry')?.addEventListener('click', uploadAndGenerateQr);
+
+/* ------------------------------- QR Code Download ------------------------------- */
+
+async function showQrModal() {
+  const modal = $('qr-modal');
+  if (!modal) return;
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+
+  // Pause idle timer while user is viewing/scanning the QR code
+  clearTimeout(idleTimer);
+  if (idleBar) idleBar.classList.remove('run');
+
+  if (uploadedQrUrl) {
+    showQrCode(uploadedQrUrl);
+    return;
+  }
+
+  await uploadAndGenerateQr();
+}
+
+async function uploadAndGenerateQr() {
+  const loading = $('qr-loading');
+  const ready = $('qr-ready');
+  const errBox = $('qr-error');
+
+  if (loading) loading.style.display = 'flex';
+  if (ready) ready.style.display = 'none';
+  if (errBox) errBox.style.display = 'none';
+
+  try {
+    // If print composite image is still preparing, wait for it
+    if (!currentPrintDataUrl && !$('print-composite-img')) {
+      await preparePrintImage();
+    }
+
+    const printImg = $('print-composite-img');
+    const imageToUpload = printImg?.src || currentPrintDataUrl || resultSrc;
+    if (!imageToUpload) throw new Error('No image available');
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imageToUpload }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.url) {
+      throw new Error(data.message || data.error || 'Upload failed');
+    }
+
+    uploadedQrUrl = data.url;
+    await showQrCode(data.url);
+  } catch (err) {
+    console.error('Failed to upload image for QR:', err);
+    if (loading) loading.style.display = 'none';
+    if (ready) ready.style.display = 'none';
+    if (errBox) errBox.style.display = 'flex';
+  }
+}
+
+async function showQrCode(url) {
+  const loading = $('qr-loading');
+  const ready = $('qr-ready');
+  const errBox = $('qr-error');
+  const canvas = $('qr-canvas');
+
+  if (!canvas) return;
+
+  await QRCode.toCanvas(canvas, url, {
+    width: 340,
+    margin: 2,
+    color: {
+      dark: '#092d5d',
+      light: '#ffffff',
+    },
+    errorCorrectionLevel: 'M',
+  });
+
+  if (loading) loading.style.display = 'none';
+  if (ready) ready.style.display = 'flex';
+  if (errBox) errBox.style.display = 'none';
+}
+
+function closeQrModal() {
+  const modal = $('qr-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+
+  if (document.body.dataset.state === 'final') {
+    startIdle();
+  }
+}
+
 // Final Screen: Retake / New Photo button
 $('btn-retake')?.addEventListener('click', restart);
 
@@ -639,7 +756,9 @@ $('btn-retry')?.addEventListener('click', () => {
         drawCover(ctx, sample, stage.width, stage.height);
       }
     } else if (testScreen === 'final') {
+      resultSrc = CONFIG.testImage;
       finalResultImg.src = CONFIG.testImage;
+      preparePrintImage();
     } else if (testScreen === 'loading') {
       if (sub) sub.textContent = LOADING_LINES[0];
       if (progressBarFill) progressBarFill.style.width = '65%';

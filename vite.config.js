@@ -12,7 +12,13 @@ function localApi(env) {
     name: 'local-api',
     configureServer(server) {
       Object.assign(process.env, env);
-      server.middlewares.use('/api/caricature', async (req, res) => {
+      server.middlewares.use(async (req, res, next) => {
+        const path = req.url.split('?')[0];
+        if (!path.startsWith('/api/')) return next();
+        const routeName = path.replace(/^\/api\//, '');
+        const validRoutes = ['caricature', 'upload'];
+        if (!validRoutes.includes(routeName)) return next();
+
         try {
           const chunks = [];
           for await (const c of req) chunks.push(c);
@@ -24,10 +30,10 @@ function localApi(env) {
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(obj));
           };
-          const mod = await server.ssrLoadModule('/api/caricature.js');
+          const mod = await server.ssrLoadModule(`/api/${routeName}.js`);
           await mod.default(req, res);
         } catch (e) {
-          console.error('[local-api]', e);
+          console.error(`[local-api] ${routeName}:`, e);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ error: 'server_error' }));

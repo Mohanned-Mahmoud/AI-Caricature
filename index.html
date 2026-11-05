@@ -141,10 +141,63 @@
       <!-- Layer 3: Interactive Controls (Print, Save, New Photo) -->
       <div class="layer-controls">
         <button id="btn-print" class="kiosk-btn btn-print-action" aria-label="Print Caricature"></button>
-        <a id="btn-save" class="kiosk-btn btn-save-action" download="caricature.png" aria-label="Save Image"></a>
+        <button id="btn-save" class="kiosk-btn btn-save-action" aria-label="Save Photo via QR Code"></button>
         <button id="btn-retake" class="kiosk-btn btn-retake-action" aria-label="Take New Photo"></button>
       </div>
     </section>
+
+    <!-- QR CODE DOWNLOAD MODAL -->
+    <div id="qr-modal" class="kiosk-modal" aria-hidden="true">
+      <div class="kiosk-modal-backdrop" id="qr-modal-backdrop"></div>
+      <div class="qr-card">
+        <button id="btn-qr-close" class="qr-close-btn" aria-label="Close QR dialog">
+          <svg viewBox="0 0 24 24" width="34" height="34" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <div class="qr-header">
+          <div class="qr-icon-badge">
+            <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="#00a8e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"></line>
+            </svg>
+          </div>
+          <h2 class="qr-title">حمّل صورتك على هاتفك</h2>
+          <p class="qr-subtitle">امسح رمز الـ QR بكاميرا الجوال لتنزيل صورتك التذكارية بجودة عالية</p>
+        </div>
+
+        <div class="qr-body">
+          <!-- Loading state -->
+          <div id="qr-loading" class="qr-state-box">
+            <div class="qr-spinner"></div>
+            <p class="qr-loading-text">جاري رفع الصورة وتجهيز الرمز&hellip;</p>
+          </div>
+
+          <!-- QR code state -->
+          <div id="qr-ready" class="qr-state-box" style="display: none;">
+            <div class="qr-code-frame">
+              <canvas id="qr-canvas"></canvas>
+            </div>
+            <div class="qr-instruction-pill">
+              <span class="qr-dot"></span>
+              <span>متاح للتحميل الفوري بدقة عالية</span>
+            </div>
+          </div>
+
+          <!-- Error state -->
+          <div id="qr-error" class="qr-state-box" style="display: none;">
+            <p class="qr-error-text">تعذر رفع الصورة، تأكد من الاتصال بالإنترنت</p>
+            <button id="btn-qr-retry" class="qr-retry-btn">إعادة المحاولة</button>
+          </div>
+        </div>
+
+        <div class="qr-footer">
+          <button id="btn-qr-done" class="qr-done-btn">تم</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ERROR SCREEN -->
     <section id="screen-error" class="screen">
