@@ -1,15 +1,30 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
-const { fileURLToPath } = require('url');
+const { pathToFileURL } = require('url');
+
+// Global Error Handlers (Pop-up alert instead of silent crash)
+process.on('uncaughtException', (err) => {
+  console.error('[Electron Uncaught Exception]', err);
+  try {
+    dialog.showErrorBox('Application Error', err?.stack || err?.message || String(err));
+  } catch (_) {}
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Electron Unhandled Rejection]', reason);
+  try {
+    dialog.showErrorBox('Unhandled Rejection', reason?.stack || reason?.message || String(reason));
+  } catch (_) {}
+});
 
 // --- Kiosk & Printer Configuration ---
 const CONFIG = {
   port: 5173,
   fullscreen: true,       // Full-screen photo booth kiosk
   frame: false,           // Frameless window
-  kiosk: true,            // Locks into kiosk mode
+  kiosk: false,           // Set to false to match Talabat (clean full-screen without OS lock)
   autoHideMenuBar: true,
   printerDeviceName: ''   // Empty = Windows default printer, or specify e.g. "EPSON L3250 Series"
 };
@@ -19,26 +34,39 @@ let serverInstance = null;
 
 // ---- 1. Embedded HTTP Server (Serves dist + APIs) ----
 async function startEmbeddedServer() {
-  const envPath = path.join(__dirname, '.env');
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    for (const line of envContent.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const eqIdx = trimmed.indexOf('=');
-      if (eqIdx !== -1) {
-        const key = trimmed.slice(0, eqIdx).trim();
-        const val = trimmed.slice(eqIdx + 1).trim();
-        if (!process.env[key]) process.env[key] = val;
+  // Load .env from resources/app or cwd
+  const envCandidates = [
+    path.join(__dirname, '.env'),
+    path.join(process.cwd(), '.env')
+  ];
+
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      console.log(`[Embedded Server] Loading environment from ${envPath}`);
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      for (const line of envContent.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim();
+          if (!process.env[key]) process.env[key] = val;
+        }
       }
+      break;
     }
   }
 
   // Dynamic import for ES modules
-  const caricatureModule = await import('./api/caricature.js');
-  const uploadModule = await import('./api/upload.js');
-  const caricatureHandler = caricatureModule.default;
-  const uploadHandler = uploadModule.default;
+  const caricaturePath = path.join(__dirname, 'api', 'caricature.js');
+  const uploadPath = path.join(__dirname, 'api', 'upload.js');
+
+  console.log(`[Embedded Server] Importing API handlers...`);
+  const caricatureModule = await import(pathToFileURL(caricaturePath).href);
+  const uploadModule = await import(pathToFileURL(uploadPath).href);
+  const caricatureHandler = caricatureModule.default || caricatureModule;
+  const uploadHandler = uploadModule.default || uploadModule;
 
   const DIST_DIR = path.join(__dirname, 'dist');
   const MIME_TYPES = {
@@ -116,12 +144,28 @@ async function startEmbeddedServer() {
     }
   });
 
-  return new Promise((resolve) => {
-    server.listen(CONFIG.port, '127.0.0.1', () => {
-      console.log(`[Embedded Server] Running at http://127.0.0.1:${CONFIG.port}`);
-      serverInstance = server;
-      resolve();
-    });
+  // Dynamically find available port starting at CONFIG.port (default 5173)
+  return new Promise((resolve, reject) => {
+    let currentPort = CONFIG.port;
+    function tryListen() {
+      server.once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.warn(`[Embedded Server] Port ${currentPort} in use, trying ${currentPort + 1}...`);
+          currentPort++;
+          server.close();
+          tryListen();
+        } else {
+          reject(err);
+        }
+      });
+      server.listen(currentPort, '127.0.0.1', () => {
+        CONFIG.port = currentPort;
+        console.log(`[Embedded Server] Running successfully at http://127.0.0.1:${CONFIG.port}`);
+        serverInstance = server;
+        resolve();
+      });
+    }
+    tryListen();
   });
 }
 
@@ -133,7 +177,7 @@ function executeSilentPrint(win) {
 
   win.webContents.print(
     {
-      silent: false,           // Set to true if target printer is fixed, or false to choose printer
+      silent: false,           // Set to false to show print dialog (or true for zero-dialog silent print)
       printBackground: true,   // Ensures background and framing are printed
       color: true,             // Color mode
       landscape: false,        // Portrait orientation for caricature photo card
@@ -154,7 +198,7 @@ function executeSilentPrint(win) {
 async function createWindow() {
   await startEmbeddedServer();
 
-  const preloadPath = path.join(__dirname, 'preload.js');
+  const preloadPath = path.join(__dirname, 'preload.cjs');
 
   mainWindow = new BrowserWindow({
     width: 1080,
@@ -163,6 +207,7 @@ async function createWindow() {
     frame: CONFIG.frame,
     kiosk: CONFIG.kiosk,
     autoHideMenuBar: CONFIG.autoHideMenuBar,
+    backgroundColor: '#000000',
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -177,7 +222,7 @@ async function createWindow() {
     executeSilentPrint(win || mainWindow);
   });
 
-  // Testing shortcuts (Same as Talabat)
+  // Testing & Booth shortcuts (Same as Talabat)
   mainWindow.webContents.on('before-input-event', (event, input) => {
     // Ctrl + P triggers print
     if (input.control && input.key.toLowerCase() === 'p') {
