@@ -1,0 +1,6 @@
+{
+  "name": "caricature-photobooth",
+  "version": "1.0.0",
+  "description": "Standalone Electron Kiosk for AI Caricature Photobooth",
+  "main": "main.js"
+}
