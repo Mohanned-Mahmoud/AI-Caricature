@@ -24,7 +24,8 @@ const CONFIG = {
   port: 5173,
   fullscreen: true,       // Full-screen photo booth kiosk
   frame: false,           // Frameless window
-  kiosk: false,           // Set to false to match Talabat (clean full-screen without OS lock)
+  kiosk: true,            // Locks into kiosk mode to suppress Windows Taskbar completely
+  alwaysOnTop: true,      // Keeps kiosk window above Taskbar and background print notifications
   autoHideMenuBar: true,
   printerDeviceName: ''   // Empty = Windows default printer, or specify e.g. "EPSON L3250 Series"
 };
@@ -182,6 +183,11 @@ function executeSilentPrint(win) {
       printBackground: true    // Ensures background images and photo card are printed
     },
     (success, failureReason) => {
+      // Re-assert topmost focus after print job dispatched to keep taskbar hidden
+      if (win && !win.isDestroyed()) {
+        win.focus();
+        win.setAlwaysOnTop(true, 'screen-saver');
+      }
       if (!success) {
         console.error('[Electron] ❌ Print failed:', failureReason);
       } else {
@@ -189,6 +195,20 @@ function executeSilentPrint(win) {
       }
     }
   );
+
+  // Prevent Windows spooler / tray notification from popping Taskbar over kiosk
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) {
+      win.focus();
+      win.setAlwaysOnTop(true, 'screen-saver');
+    }
+  }, 250);
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) {
+      win.focus();
+      win.setAlwaysOnTop(true, 'screen-saver');
+    }
+  }, 1000);
 }
 
 // ---- 3. Window Creation ----
@@ -203,6 +223,7 @@ async function createWindow() {
     fullscreen: CONFIG.fullscreen,
     frame: CONFIG.frame,
     kiosk: CONFIG.kiosk,
+    alwaysOnTop: CONFIG.alwaysOnTop,
     autoHideMenuBar: CONFIG.autoHideMenuBar,
     backgroundColor: '#000000',
     webPreferences: {
@@ -212,6 +233,10 @@ async function createWindow() {
       sandbox: false
     }
   });
+
+  if (CONFIG.alwaysOnTop) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  }
 
   // Handle IPC silent-print request intercepted from window.print()
   ipcMain.on('silent-print', (event) => {
@@ -226,9 +251,12 @@ async function createWindow() {
       event.preventDefault();
       executeSilentPrint(mainWindow);
     }
-    // Esc toggles full-screen mode off
+    // Esc toggles kiosk/fullscreen mode
     if (input.key === 'Escape') {
-      mainWindow.setFullScreen(!mainWindow.isFullScreen());
+      const isKiosk = mainWindow.isKiosk();
+      mainWindow.setKiosk(!isKiosk);
+      mainWindow.setFullScreen(!isKiosk);
+      mainWindow.setAlwaysOnTop(!isKiosk, 'screen-saver');
     }
     // F12 toggles DevTools
     if (input.key === 'F12') {
