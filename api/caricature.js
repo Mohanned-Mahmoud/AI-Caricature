@@ -9,7 +9,7 @@ import { PROMPT } from '../src/prompts.js';
 
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel body limit is ~4.5MB
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
-const UPSTREAM_TIMEOUT_MS = 55000;
+const UPSTREAM_TIMEOUT_MS = 180000; // 3 minutes: allows complex AI generation without premature cutoff
 
 // ---- Basic in-memory rate limiter (best-effort per server instance) ----
 const hits = new Map(); // ip -> number[] timestamps

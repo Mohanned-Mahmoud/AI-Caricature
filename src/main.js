@@ -265,12 +265,24 @@ function goToWelcome() {
 }
 
 function startIdle() {
+  clearTimeout(idleTimer);
+  if (idleBar) idleBar.classList.remove('run');
+
+  // Strictly ONLY start screensaver countdown on the final result screen
+  if (document.body.dataset.state !== 'final') return;
+
   const ms = CONFIG.idleTimeoutMs;
   if (!idleBar) return;
   idleBar.style.transitionDuration = ms + 'ms';
   void idleBar.offsetWidth;
   idleBar.classList.add('run');
-  idleTimer = setTimeout(goToWelcome, ms);
+
+  idleTimer = setTimeout(() => {
+    // Only return to welcome screensaver if we are still on final screen
+    if (document.body.dataset.state === 'final') {
+      goToWelcome();
+    }
+  }, ms);
 }
 
 window.addEventListener('pointerdown', () => {
@@ -499,6 +511,8 @@ async function aiResult() {
 /* ------------------------------- session execution ------------------------------- */
 
 async function runSession(id) {
+  clearTimeout(idleTimer);
+  if (idleBar) idleBar.classList.remove('run');
   setState('loading');
   setCaption('');
 
@@ -511,6 +525,10 @@ async function runSession(id) {
       resultPromise,
       onStage: (st) => {
         if (id !== sessionId) return;
+        // Strictly prevent screensaver idle timer from running while drawing
+        clearTimeout(idleTimer);
+        if (idleBar) idleBar.classList.remove('run');
+
         if (st === 'redraw') {
           if (progressBarFill) progressBarFill.style.width = '100%';
           setState('drawing');
@@ -529,7 +547,15 @@ async function runSession(id) {
     if (id !== sessionId) return;
 
     setCaption('');
-    if (finalResultImg) finalResultImg.src = resultSrc;
+    if (finalResultImg) {
+      finalResultImg.src = resultSrc;
+      try {
+        if (finalResultImg.decode) {
+          await finalResultImg.decode();
+        }
+      } catch (_) {}
+    }
+
     if ($('btn-save')) {
       $('btn-save').style.display = CONFIG.enableDownload ? '' : 'none';
     }

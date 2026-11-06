@@ -24,7 +24,7 @@ export const CONFIG = {
   captureMaxSide: 1920,           // px, capture canvas long side
   apiMaxSide: 1024,               // px, downscale before sending to API
   apiJpegQuality: 0.85,
-  apiTimeoutMs: 60000,
+  apiTimeoutMs: 180000,
 
   // ---- Final screen ----
   idleTimeoutMs: 45000,           // auto-return to camera
