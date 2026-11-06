@@ -173,16 +173,13 @@ async function startEmbeddedServer() {
 function executeSilentPrint(win) {
   if (!win || win.isDestroyed()) return;
 
-  console.log('\n[Electron] 🖨️  Initiating Silent Photobooth Print (No Dialog)...');
+  console.log('\n[Electron] 🖨️  Initiating Silent Photobooth Print (Using Windows Printer Defaults)...');
 
+  // No margin, orientation, or paper size overrides: uses 100% of the driver settings configured in Windows
   win.webContents.print(
     {
       silent: true,            // Direct silent printing: bypasses print dialog completely
-      printBackground: true,   // Ensures background and framing are printed
-      color: true,             // Color mode
-      landscape: false,        // Portrait orientation for caricature photo card
-      margins: { marginType: 'none' },
-      deviceName: CONFIG.printerDeviceName || ''
+      printBackground: true    // Ensures background images and photo card are printed
     },
     (success, failureReason) => {
       if (!success) {

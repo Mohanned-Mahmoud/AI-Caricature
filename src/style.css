@@ -1067,11 +1067,6 @@ body[data-state='loading'] #kiosk-stage,
   }
 
   @media print {
-    @page {
-      size: auto;
-      margin: 0;
-    }
-
     html,
     body {
       margin: 0 !important;
@@ -1093,20 +1088,19 @@ body[data-state='loading'] #kiosk-stage,
     #screen-loading,
     #screen-drawing,
     #screen-final,
-    #screen-error {
+    #screen-error,
+    .qr-modal-backdrop,
+    .qr-modal-card {
       display: none !important;
     }
 
     #print-area {
-      display: flex !important;
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
+      display: block !important;
+      position: static !important;
+      width: 100% !important;
+      height: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
-      align-items: center !important;
-      justify-content: center !important;
       background: #ffffff !important;
       page-break-after: avoid !important;
       break-after: avoid !important;
@@ -1116,12 +1110,12 @@ body[data-state='loading'] #kiosk-stage,
 
     #print-area img {
       display: block !important;
-      width: 100vw !important;
-      height: 100vh !important;
+      width: 100% !important;
+      height: 100% !important;
       max-width: 100% !important;
       max-height: 100% !important;
       object-fit: contain !important;
-      margin: auto !important;
+      margin: 0 auto !important;
       page-break-after: avoid !important;
       break-after: avoid !important;
       page-break-inside: avoid !important;
