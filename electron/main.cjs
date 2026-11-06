@@ -173,11 +173,11 @@ async function startEmbeddedServer() {
 function executeSilentPrint(win) {
   if (!win || win.isDestroyed()) return;
 
-  console.log('\n[Electron] 🖨️  Initiating Photobooth Print...');
+  console.log('\n[Electron] 🖨️  Initiating Silent Photobooth Print (No Dialog)...');
 
   win.webContents.print(
     {
-      silent: false,           // Set to false to show print dialog (or true for zero-dialog silent print)
+      silent: true,            // Direct silent printing: bypasses print dialog completely
       printBackground: true,   // Ensures background and framing are printed
       color: true,             // Color mode
       landscape: false,        // Portrait orientation for caricature photo card

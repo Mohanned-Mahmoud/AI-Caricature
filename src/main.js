@@ -615,7 +615,11 @@ $('btn-print')?.addEventListener('click', async () => {
   if (!$('print-composite-img')) {
     await preparePrintImage();
   }
-  window.print();
+  if (window.electronAPI && typeof window.electronAPI.silentPrint === 'function') {
+    window.electronAPI.silentPrint();
+  } else {
+    window.print();
+  }
 });
 
 // Final Screen: Save / Download via QR Modal
