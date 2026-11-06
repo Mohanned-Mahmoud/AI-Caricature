@@ -174,13 +174,22 @@ async function startEmbeddedServer() {
 function executeSilentPrint(win) {
   if (!win || win.isDestroyed()) return;
 
-  console.log('\n[Electron] 🖨️  Initiating Silent Photobooth Print (Using Windows Printer Defaults)...');
+  console.log('\n[Electron] 🖨️  Initiating Silent Photobooth Print (102x152mm / 4x6 Portrait Borderless)...');
 
-  // No margin, orientation, or paper size overrides: uses 100% of the driver settings configured in Windows
   win.webContents.print(
     {
       silent: true,            // Direct silent printing: bypasses print dialog completely
-      printBackground: true    // Ensures background images and photo card are printed
+      printBackground: true,   // Ensures background images and photo card are printed
+      color: true,             // Color mode
+      landscape: false,        // Force Portrait orientation for 102x152mm photo card
+      margins: {
+        marginType: 'none'     // Zero margins for full bleed borderless 102x152
+      },
+      pageSize: {
+        width: 102000,         // 102 mm in microns
+        height: 152000         // 152 mm in microns
+      },
+      deviceName: CONFIG.printerDeviceName || ''
     },
     (success, failureReason) => {
       // Re-assert topmost focus after print job dispatched to keep taskbar hidden

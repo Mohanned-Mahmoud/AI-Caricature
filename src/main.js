@@ -64,10 +64,15 @@ async function preparePrintImage() {
     frameCanvas.height = FRAME_APERTURE_H;
     const fCtx = frameCanvas.getContext('2d');
 
+    // Fill with solid white backing to prevent transparent gaps from turning black in JPEG
+    fCtx.fillStyle = '#ffffff';
+    fCtx.fillRect(0, 0, FRAME_APERTURE_W, FRAME_APERTURE_H);
+
     // Scale to fill HEIGHT exactly — full portrait always visible, sides may crop if wider
     drawFitHeight(fCtx, caricatureImg, FRAME_APERTURE_W, FRAME_APERTURE_H);
 
-    const fittedCaricatureDataUrl = frameCanvas.toDataURL('image/jpeg', 0.96);
+    // PNG ensures clean alpha blending without any black border artifacts
+    const fittedCaricatureDataUrl = frameCanvas.toDataURL('image/png');
 
     const svgText = rawTemplate.replace(
       /href="" xlink:href=""/g,
@@ -83,16 +88,17 @@ async function preparePrintImage() {
       img.src = url;
     });
 
+    // Native SVG template resolution (2891 x 4309) perfectly matching 102x152mm (0.671 ratio)
     const canvas = document.createElement('canvas');
-    canvas.width = 1600;
-    canvas.height = 2400;
+    canvas.width = 2891;
+    canvas.height = 4309;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(url);
 
-    const printDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    const printDataUrl = canvas.toDataURL('image/jpeg', 0.98);
     currentPrintDataUrl = printDataUrl;
     printArea.innerHTML = `<img id="print-composite-img" src="${printDataUrl}" alt="Photobooth Print" />`;
   } catch (err) {
