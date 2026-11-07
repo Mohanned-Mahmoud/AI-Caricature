@@ -250,7 +250,59 @@ function setCaption(text) {
   }, 250);
 }
 
-/* ------------------------------- idle reset ------------------------------- */
+/* ------------------------------- idle reset & print cooldown ------------------------------- */
+
+let isPrintCooldown = false;
+let printCooldownTimer = null;
+
+function resetPrintCooldown() {
+  if (printCooldownTimer) {
+    clearInterval(printCooldownTimer);
+    printCooldownTimer = null;
+  }
+  isPrintCooldown = false;
+  const btn = $('btn-print');
+  if (btn) {
+    btn.classList.remove('cooldown');
+    btn.removeAttribute('disabled');
+    btn.removeAttribute('aria-disabled');
+    btn.innerHTML = '';
+  }
+}
+
+function startPrintCooldown(seconds = 5) {
+  const btn = $('btn-print');
+  if (!btn) return;
+
+  resetPrintCooldown();
+  isPrintCooldown = true;
+  btn.classList.add('cooldown');
+  btn.setAttribute('disabled', 'true');
+  btn.setAttribute('aria-disabled', 'true');
+
+  let remaining = seconds;
+  const render = () => {
+    btn.innerHTML = `
+      <div class="print-cooldown-content">
+        <div class="print-cooldown-circle">
+          <span class="print-cooldown-num">${remaining}</span>
+        </div>
+        <span class="print-cooldown-text">Printing...</span>
+      </div>
+    `;
+  };
+
+  render();
+
+  printCooldownTimer = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      render();
+    } else {
+      resetPrintCooldown();
+    }
+  }, 1000);
+}
 
 function goToWelcome() {
   sessionId++;
@@ -259,6 +311,7 @@ function goToWelcome() {
   countdownEl.innerHTML = '';
   setDrawingStage('');
   closeQrModal();
+  resetPrintCooldown();
   uploadedQrUrl = null;
   currentPrintDataUrl = null;
   setState('welcome');
@@ -597,6 +650,7 @@ async function restart() {
   countdownEl.innerHTML = '';
   setDrawingStage('');
   closeQrModal();
+  resetPrintCooldown();
   uploadedQrUrl = null;
   currentPrintDataUrl = null;
 
@@ -644,6 +698,11 @@ window.addEventListener('keydown', (e) => {
 
 // Final Screen: Print button
 $('btn-print')?.addEventListener('click', async () => {
+  if (isPrintCooldown) return;
+
+  // Lock button for 5 seconds with blur and countdown timer overlay
+  startPrintCooldown(5);
+
   if (!$('print-composite-img')) {
     await preparePrintImage();
   }
@@ -760,8 +819,10 @@ function closeQrModal() {
   }
 }
 
-// Final Screen: Retake / New Photo button
-$('btn-retake')?.addEventListener('click', restart);
+// Final Screen: Retake / New Photo button (returns to screensaver / welcome video)
+$('btn-retake')?.addEventListener('click', () => {
+  goToWelcome();
+});
 
 // Error Screen buttons
 $('btn-restart')?.addEventListener('click', restart);
